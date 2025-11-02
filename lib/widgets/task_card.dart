@@ -7,6 +7,7 @@ class TaskCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final VoidCallback onShare;
 
   static final _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
@@ -16,6 +17,7 @@ class TaskCard extends StatelessWidget {
     required this.onTap,
     required this.onToggle,
     required this.onDelete,
+    required this.onShare,
   });
 
   Color _getPriorityColor() {
@@ -214,6 +216,16 @@ class TaskCard extends StatelessWidget {
               ),
 
               const SizedBox(width: 8),
+
+              // Botão Compartilhar
+              IconButton(
+                onPressed: onShare,
+                icon: Icon(
+                  Icons.share_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                tooltip: 'Compartilhar tarefa',
+              ),
 
               // Botão Deletar
               IconButton(

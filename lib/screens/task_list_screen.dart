@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/category.dart';
 import '../models/task.dart';
 import '../services/database_service.dart';
@@ -16,6 +17,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   // Estado das listas
   List<Task> _tasks = [];
   List<Category> _categories = [];
+
   // Estado dos filtros
   String _filter = 'all'; // 'all', 'completed', 'pending'
   String _categoryFilter = 'all';
@@ -129,6 +131,40 @@ class _TaskListScreenState extends State<TaskListScreen> {
     if (result == true) {
       await _loadData();
     }
+  }
+
+  String _getPriorityLabelForShare(String priority) {
+    switch (priority) {
+      case 'low':
+        return 'Baixa';
+      case 'medium':
+        return 'Média';
+      case 'high':
+        return 'Alta';
+      case 'urgent':
+        return 'Urgente';
+      default:
+        return 'Média';
+    }
+  }
+
+  // Método para formatar e compartilhar a tarefa
+  Future<void> _shareTask(Task task) async {
+    final String status = task.completed ? "✓ Concluída" : "□ Pendente";
+    final String priority = _getPriorityLabelForShare(task.priority);
+    final String category = task.category?.name ?? "Geral";
+
+    final String textToShare =
+        """
+Tarefa: ${task.title}
+Status: $status
+Prioridade: $priority
+Categoria: $category
+
+${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
+""";
+
+    await Share.share(textToShare, subject: 'Tarefa: ${task.title}');
   }
 
   @override
@@ -285,6 +321,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           onTap: () => _openTaskForm(task),
                           onToggle: () => _toggleTask(task),
                           onDelete: () => _deleteTask(task),
+                          onShare: () => _shareTask(task),
                         );
                       },
                     ),
