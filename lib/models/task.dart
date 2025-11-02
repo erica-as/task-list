@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'category.dart';
 
 class Task {
   final String id;
@@ -7,6 +8,8 @@ class Task {
   final bool completed;
   final String priority;
   final DateTime createdAt;
+  final String categoryId;
+  final Category? category;
 
   Task({
     String? id,
@@ -15,6 +18,8 @@ class Task {
     this.completed = false,
     this.priority = 'medium',
     DateTime? createdAt,
+    required this.categoryId,
+    this.category,
   }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now();
 
@@ -26,6 +31,7 @@ class Task {
       'completed': completed ? 1 : 0,
       'priority': priority,
       'createdAt': createdAt.toIso8601String(),
+      'categoryId': categoryId,
     };
   }
 
@@ -37,6 +43,30 @@ class Task {
       completed: map['completed'] == 1,
       priority: map['priority'] ?? 'medium',
       createdAt: DateTime.parse(map['createdAt']),
+      categoryId: map['categoryId'] ?? 'default',
+    );
+  }
+
+  factory Task.fromMapWithCategory(Map<String, dynamic> map) {
+    Category? category;
+
+    if (map['categoryId'] != null && map['categoryName'] != null) {
+      category = Category(
+        id: map['categoryId'] as String,
+        name: map['categoryName'] as String,
+        colorHex: map['categoryColorHex'] as String,
+      );
+    }
+
+    return Task(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      description: map['description'] ?? '',
+      completed: map['completed'] == 1,
+      priority: map['priority'] ?? 'medium',
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      categoryId: map['categoryId'] as String,
+      category: category,
     );
   }
 
@@ -45,6 +75,8 @@ class Task {
     String? description,
     bool? completed,
     String? priority,
+    String? categoryId,
+    Category? category,
   }) {
     return Task(
       id: id,
@@ -53,6 +85,8 @@ class Task {
       completed: completed ?? this.completed,
       priority: priority ?? this.priority,
       createdAt: createdAt,
+      categoryId: categoryId ?? this.categoryId,
+      category: category ?? this.category,
     );
   }
 }

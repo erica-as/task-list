@@ -1,290 +1,378 @@
 import 'package:flutter/material.dart';
+import '../models/category.dart';
 import '../models/task.dart';
 import '../services/database_service.dart';
+import '../widgets/task_card.dart';
+import 'task_form_screen.dart';
 
 class TaskListScreen extends StatefulWidget {
-  const TaskListScreen({Key? key}) : super(key: key);
+  const TaskListScreen({super.key});
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
+  // Estado das listas
   List<Task> _tasks = [];
-  final _titleController = TextEditingController();
-  String _selectedPriority = 'medium';
-  String _filter = 'all';
+  List<Category> _categories = [];
+  // Estado dos filtros
+  String _filter = 'all'; // 'all', 'completed', 'pending'
+  String _categoryFilter = 'all';
+
+  // Estado da tela
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+    _loadData();
   }
 
-  Future<void> _loadTasks() async {
-    final tasks = await DatabaseService.instance.readAll();
-    print('Tasks carregadas: ${tasks.length}');
-    setState(() {
-      if (_filter == 'completed') {
-        _tasks = tasks.where((t) => t.completed).toList();
-      } else if (_filter == 'pending') {
-        _tasks = tasks.where((t) => !t.completed).toList();
-      } else {
-        _tasks = tasks;
+  // Carrega tarefas e categorias
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final tasksFuture = DatabaseService.instance.readAll();
+      final categoriesFuture = DatabaseService.instance.readAllCategories();
+
+      final results = await Future.wait([tasksFuture, categoriesFuture]);
+
+      if (mounted) {
+        setState(() {
+          _tasks = results[0] as List<Task>;
+          _categories = results[1] as List<Category>;
+          _isLoading = false;
+        });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao carregar dados: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  Future<void> _addTask() async {
-    if (_titleController.text.trim().isEmpty) return;
+  List<Task> get _filteredTasks {
+    var tasks = _tasks;
 
-    final task = Task(
-      title: _titleController.text.trim(),
-      priority: _selectedPriority,
-    );
-    await DatabaseService.instance.create(task);
-    print('Tarefa adicionada: ${task.toMap()}');
-    _titleController.clear();
-    _loadTasks();
+    // 1. Filtro por Categoria
+    if (_categoryFilter != 'all') {
+      tasks = tasks.where((t) => t.categoryId == _categoryFilter).toList();
+    }
+
+    // 2. Filtro por Status (Existente)
+    switch (_filter) {
+      case 'completed':
+        tasks = tasks.where((t) => t.completed).toList();
+        break;
+      case 'pending':
+        tasks = tasks.where((t) => !t.completed).toList();
+        break;
+      default:
+    }
+
+    return tasks;
   }
 
   Future<void> _toggleTask(Task task) async {
     final updated = task.copyWith(completed: !task.completed);
     await DatabaseService.instance.update(updated);
-    _loadTasks();
+    await _loadData();
   }
 
-  Future<void> _editTask(Task task) async {
-    final titleController = TextEditingController(text: task.title);
-    String selectedPriority = task.priority;
-
-    final result = await showDialog<bool>(
+  Future<void> _deleteTask(Task task) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Editar Tarefa'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Título'),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: selectedPriority,
-              decoration: const InputDecoration(labelText: 'Prioridade'),
-              items: const [
-                DropdownMenuItem(value: 'low', child: Text('Baixa')),
-                DropdownMenuItem(value: 'medium', child: Text('Média')),
-                DropdownMenuItem(value: 'high', child: Text('Alta')),
-              ],
-              onChanged: (value) {
-                if (value != null) selectedPriority = value;
-              },
-            ),
-          ],
-        ),
+        title: const Text('Confirmar exclusão'),
+        content: Text('Deseja realmente excluir "${task.title}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Salvar'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Excluir'),
           ),
         ],
       ),
     );
 
-    if (result == true) {
-      final updatedTask = task.copyWith(
-        title: titleController.text.trim(),
-        priority: selectedPriority,
-      );
-      await DatabaseService.instance.update(updatedTask);
-      _loadTasks();
+    if (confirmed == true) {
+      await DatabaseService.instance.delete(task.id);
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tarefa excluída'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
-  Future<void> _deleteTask(String id) async {
-    await DatabaseService.instance.delete(id);
-    _loadTasks();
-  }
+  Future<void> _openTaskForm([Task? task]) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => TaskFormScreen(task: task)),
+    );
 
-  int get _totalTasks => _tasks.length;
-  int get _completedTasks => _tasks.where((t) => t.completed).length;
-  int get _pendingTasks => _tasks.where((t) => !t.completed).length;
+    if (result == true) {
+      await _loadData();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final filteredTasks = _filteredTasks;
+    final stats = _calculateStats(filteredTasks);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Minhas Tarefas'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        elevation: 2,
         actions: [
           PopupMenuButton<String>(
-            onSelected: (value) {
-              setState(() => _filter = value);
-              _loadTasks();
-            },
+            icon: const Icon(Icons.category_outlined),
+            tooltip: 'Filtrar por Categoria',
+            onSelected: (value) => setState(() => _categoryFilter = value),
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'all', child: Text('Todas')),
-              const PopupMenuItem(value: 'completed', child: Text('Completas')),
-              const PopupMenuItem(value: 'pending', child: Text('Pendentes')),
+              PopupMenuItem(
+                value: 'all',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.clear_all,
+                      color: _categoryFilter == 'all'
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Todas as Categorias'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              ..._categories.map((category) {
+                return PopupMenuItem(
+                  value: category.id,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.circle,
+                        size: 16,
+                        color: _categoryFilter == category.id
+                            ? category.color
+                            : category.color.withOpacity(0.7),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(category.name),
+                    ],
+                  ),
+                );
+              }),
             ],
+          ),
+
+          // Filtro de Status (Existente)
+          PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
+            tooltip: 'Filtrar por Status',
+            onSelected: (value) => setState(() => _filter = value),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'all',
+                child: Row(
+                  children: [
+                    Icon(Icons.list),
+                    SizedBox(width: 8),
+                    Text('Todas'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'pending',
+                child: Row(
+                  children: [
+                    Icon(Icons.pending_actions),
+                    SizedBox(width: 8),
+                    Text('Pendentes'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'completed',
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle),
+                    SizedBox(width: 8),
+                    Text('Concluídas'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildCounter('Total', _totalTasks, Colors.blue),
-                _buildCounter('Concluídas', _completedTasks, Colors.green),
-                _buildCounter('Pendentes', _pendingTasks, Colors.orange),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: TextField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nova tarefa...',
-                      border: OutlineInputBorder(),
-                    ),
+          if (_tasks.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.indigoAccent, Colors.purpleAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedPriority,
-                    decoration: const InputDecoration(
-                      labelText: 'Prioridade',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'low', child: Text('Baixa')),
-                      DropdownMenuItem(value: 'medium', child: Text('Média')),
-                      DropdownMenuItem(value: 'high', child: Text('Alta')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _selectedPriority = value);
-                      }
-                    },
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStatItem(
+                    Icons.list,
+                    'Total',
+                    stats['total'].toString(),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _addTask,
-                  child: const Text('Adicionar'),
-                ),
-              ],
+                  _buildStatItem(
+                    Icons.pending_actions,
+                    'Pendentes',
+                    stats['pending'].toString(),
+                  ),
+                  _buildStatItem(
+                    Icons.check_circle,
+                    'Concluídas',
+                    stats['completed'].toString(),
+                  ),
+                ],
+              ),
             ),
-          ),
+
           Expanded(
-            child: _tasks.isEmpty
-                ? const Center(child: Text('Nenhuma tarefa encontrada.'))
-                : ListView.builder(
-                    itemCount: _tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = _tasks[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        child: ListTile(
-                          leading: Checkbox(
-                            value: task.completed,
-                            onChanged: (_) => _toggleTask(task),
-                          ),
-                          title: Text(
-                            task.title,
-                            style: TextStyle(
-                              decoration: task.completed
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Prioridade: ${_translatePriority(task.priority)}',
-                            style: TextStyle(
-                              color: _getPriorityColor(task.priority),
-                            ),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => _editTask(task),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => _deleteTask(task.id),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredTasks.isEmpty
+                ? _buildEmptyState(filteredTasks)
+                : RefreshIndicator(
+                    onRefresh: _loadData,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 80),
+                      itemCount: filteredTasks.length,
+                      itemBuilder: (context, index) {
+                        final task = filteredTasks[index];
+                        return TaskCard(
+                          task: task,
+                          onTap: () => _openTaskForm(task),
+                          onToggle: () => _toggleTask(task),
+                          onDelete: () => _deleteTask(task),
+                        );
+                      },
+                    ),
                   ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openTaskForm(),
+        icon: const Icon(Icons.add),
+        label: const Text('Nova Tarefa'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: Colors.white, size: 32),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(List<Task> filteredTasks) {
+    String message;
+    IconData icon;
+
+    if (_categoryFilter != 'all' && filteredTasks.isEmpty) {
+      message = 'Nenhuma tarefa nesta categoria';
+      icon = Icons.folder_off_outlined;
+    } else {
+      switch (_filter) {
+        case 'completed':
+          message = 'Nenhuma tarefa concluída ainda';
+          icon = Icons.check_circle_outline;
+          break;
+        case 'pending':
+          message = 'Nenhuma tarefa pendente';
+          icon = Icons.pending_actions;
+          break;
+        default:
+          message = 'Nenhuma tarefa cadastrada';
+          icon = Icons.task_alt;
+      }
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 100, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => _openTaskForm(),
+            icon: const Icon(Icons.add),
+            label: const Text('Criar primeira tarefa'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCounter(String label, int value, Color color) {
-    return Column(
-      children: [
-        Text(
-          '$value',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(label),
-      ],
-    );
-  }
-
-  String _translatePriority(String priority) {
-    switch (priority) {
-      case 'low':
-        return 'Baixa';
-      case 'medium':
-        return 'Média';
-      case 'high':
-        return 'Alta';
-      default:
-        return priority;
-    }
-  }
-
-  Color _getPriorityColor(String priority) {
-    switch (priority) {
-      case 'low':
-        return Colors.green;
-      case 'medium':
-        return Colors.orange;
-      case 'high':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+  Map<String, int> _calculateStats(List<Task> tasks) {
+    return {
+      'total': tasks.length,
+      'completed': tasks.where((t) => t.completed).length,
+      'pending': tasks.where((t) => !t.completed).length,
+    };
   }
 }

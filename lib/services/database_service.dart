@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:uuid/uuid.dart';
+import '../models/category.dart';
 import '../models/task.dart';
 
 class DatabaseService {
@@ -23,15 +25,50 @@ class DatabaseService {
 
   Future<void> _createDB(Database db, int version) async {
     await db.execute('''
+      CREATE TABLE categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        colorHex TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE tasks (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT,
         completed INTEGER NOT NULL,
         priority TEXT NOT NULL,
-        createdAt TEXT NOT NULL
+        createdAt TEXT NOT NULL,
+        categoryId TEXT NOT NULL,
+        FOREIGN KEY (categoryId) REFERENCES categories (id)
       )
     ''');
+
+    await _createDefaultCategories(db);
+  }
+
+  Future<void> _createDefaultCategories(Database db) async {
+    final uuid = Uuid();
+    final defaultCategories = [
+      Category(id: 'default', name: 'Geral', colorHex: '#9E9E9E'), // Cinza
+      Category(id: uuid.v4(), name: 'Trabalho', colorHex: '#2196F3'), // Azul
+      Category(id: uuid.v4(), name: 'Pessoal', colorHex: '#4CAF50'), // Verde
+      Category(id: uuid.v4(), name: 'Estudos', colorHex: '#FFC107'), // Amarelo
+    ];
+
+    final batch = db.batch();
+    for (final category in defaultCategories) {
+      batch.insert('categories', category.toMap());
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<Category>> readAllCategories() async {
+    final db = await instance.database;
+    final maps = await db.query('categories');
+    if (maps.isEmpty) return [];
+    return maps.map((map) => Category.fromMap(map)).toList();
   }
 
   Future<Task> create(Task task) async {
@@ -52,9 +89,20 @@ class DatabaseService {
 
   Future<List<Task>> readAll() async {
     final db = await database;
-    const orderBy = 'createdAt DESC';
-    final result = await db.query('tasks', orderBy: orderBy);
-    return result.map((map) => Task.fromMap(map)).toList();
+
+    final maps = await db.rawQuery('''
+      SELECT 
+        t.*, 
+        c.name as categoryName, 
+        c.colorHex as categoryColorHex
+      FROM tasks t
+      LEFT JOIN categories c ON t.categoryId = c.id
+      ORDER BY t.createdAt DESC
+    ''');
+
+    if (maps.isEmpty) return [];
+
+    return maps.map((map) => Task.fromMapWithCategory(map)).toList();
   }
 
   Future<int> update(Task task) async {
