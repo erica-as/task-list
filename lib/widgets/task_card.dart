@@ -67,9 +67,7 @@ class TaskCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: task.completed
-              ? Colors.grey.shade300
-              : task.category?.color ?? Colors.grey,
+          color: task.completed ? Colors.grey.shade300 : _getPriorityColor(),
           width: 2,
         ),
       ),
@@ -133,7 +131,6 @@ class TaskCard extends StatelessWidget {
                     const SizedBox(height: 8),
 
                     // Metadata Row
-                    // ATUALIZADO: Wrap para quebrar a linha se não couber
                     Wrap(
                       spacing: 12, // Espaço horizontal entre os itens
                       runSpacing: 8, // Espaço vertical se quebrar a linha
