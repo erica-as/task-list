@@ -1,5 +1,6 @@
-import 'package:sqflite/sqflite.dart';
+import 'dart:async';
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 import '../models/category.dart';
 import '../models/task.dart';
@@ -20,7 +21,12 @@ class DatabaseService {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 4,
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -32,20 +38,40 @@ class DatabaseService {
       )
     ''');
 
+    await _createDefaultCategories(db);
+
+    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const textType = 'TEXT NOT NULL';
+    const intType = 'INTEGER NOT NULL';
+
     await db.execute('''
       CREATE TABLE tasks (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        description TEXT,
-        completed INTEGER NOT NULL,
-        priority TEXT NOT NULL,
-        createdAt TEXT NOT NULL,
-        categoryId TEXT NOT NULL,
+        id $idType,
+        title $textType,
+        description $textType,
+        priority $textType,
+        completed $intType,
+        createdAt $textType,
+
+        -- MANTIDO: Campo de Categoria
+        categoryId $textType, 
+
+        -- NOVO: Campos da Câmera
+        photoPath TEXT,
+
+        -- NOVO: Campos dos Sensores
+        completedAt TEXT,
+        completedBy TEXT,
+
+        -- NOVO: Campos do GPS
+        latitude REAL,
+        longitude REAL,
+        locationName TEXT,
+
+        -- MANTIDO: Chave Estrangeira
         FOREIGN KEY (categoryId) REFERENCES categories (id)
       )
     ''');
-
-    await _createDefaultCategories(db);
   }
 
   Future<void> _createDefaultCategories(Database db) async {
@@ -64,6 +90,22 @@ class DatabaseService {
     await batch.commit(noResult: true);
   }
 
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN photoPath TEXT');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN completedAt TEXT');
+      await db.execute('ALTER TABLE tasks ADD COLUMN completedBy TEXT');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN latitude REAL');
+      await db.execute('ALTER TABLE tasks ADD COLUMN longitude REAL');
+      await db.execute('ALTER TABLE tasks ADD COLUMN locationName TEXT');
+    }
+    print('✅ Banco migrado de v$oldVersion para v$newVersion');
+  }
+
   Future<List<Category>> readAllCategories() async {
     final db = await instance.database;
     final maps = await db.query('categories');
@@ -72,13 +114,13 @@ class DatabaseService {
   }
 
   Future<Task> create(Task task) async {
-    final db = await database;
-    await db.insert('tasks', task.toMap());
-    return task;
+    final db = await instance.database;
+    final id = await db.insert('tasks', task.toMap());
+    return task.copyWith(id: id);
   }
 
-  Future<Task?> read(String id) async {
-    final db = await database;
+  Future<Task?> read(int id) async {
+    final db = await instance.database;
     final maps = await db.query('tasks', where: 'id = ?', whereArgs: [id]);
 
     if (maps.isNotEmpty) {
@@ -106,7 +148,7 @@ class DatabaseService {
   }
 
   Future<int> update(Task task) async {
-    final db = await database;
+    final db = await instance.database;
     return db.update(
       'tasks',
       task.toMap(),
@@ -115,8 +157,31 @@ class DatabaseService {
     );
   }
 
-  Future<int> delete(String id) async {
-    final db = await database;
+  Future<int> delete(int id) async {
+    final db = await instance.database;
     return await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Task>> getTasksNearLocation({
+    required double latitude,
+    required double longitude,
+    double radiusInMeters = 1000,
+  }) async {
+    final allTasks = await readAll();
+
+    return allTasks.where((task) {
+      if (!task.hasLocation) return false;
+
+      final latDiff = (task.latitude! - latitude).abs();
+      final lonDiff = (task.longitude! - longitude).abs();
+      final distanceInMeters = ((latDiff * 111000) + (lonDiff * 111000)) / 2;
+
+      return distanceInMeters <= radiusInMeters;
+    }).toList();
+  }
+
+  Future close() async {
+    final db = await instance.database;
+    db.close();
   }
 }

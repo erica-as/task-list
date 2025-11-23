@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'services/camera_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'screens/task_list_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  CameraService.instance.initialize();
 
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;

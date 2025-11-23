@@ -2,54 +2,90 @@ import 'package:uuid/uuid.dart';
 import 'category.dart';
 
 class Task {
-  final String id;
+  final int? id;
   final String title;
   final String description;
-  final bool completed;
   final String priority;
+  final bool completed;
   final DateTime createdAt;
+
   final String categoryId;
-  final Category? category;
+  final Category? category; 
+
+  final String? photoPath;
+  final DateTime? completedAt;
+  final String? completedBy; // 'manual', 'shake'
+  final double? latitude;
+  final double? longitude;
+  final String? locationName;
 
   Task({
-    String? id,
+    this.id,
     required this.title,
-    this.description = '',
+    required this.description, 
+    required this.priority, 
     this.completed = false,
-    this.priority = 'medium',
     DateTime? createdAt,
     required this.categoryId,
     this.category,
-  }) : id = id ?? const Uuid().v4(),
-       createdAt = createdAt ?? DateTime.now();
+    this.photoPath,
+    this.completedAt,
+    this.completedBy,
+    this.latitude,
+    this.longitude,
+    this.locationName,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  bool get hasPhoto => photoPath != null && photoPath!.isNotEmpty;
+  bool get hasLocation => latitude != null && longitude != null;
+  bool get wasCompletedByShake => completedBy == 'shake';
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'description': description,
-      'completed': completed ? 1 : 0,
       'priority': priority,
+      'completed': completed ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
+      
       'categoryId': categoryId,
+
+      'photoPath': photoPath,
+      'completedAt': completedAt?.toIso8601String(),
+      'completedBy': completedBy,
+      'latitude': latitude,
+      'longitude': longitude,
+      'locationName': locationName,
     };
   }
 
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
-      id: map['id'],
-      title: map['title'],
-      description: map['description'] ?? '',
-      completed: map['completed'] == 1,
-      priority: map['priority'] ?? 'medium',
-      createdAt: DateTime.parse(map['createdAt']),
+      id: map['id'] as int?,
+      title: map['title'] as String,
+      description: map['description'] as String,
+      priority: map['priority'] as String,
+      completed: (map['completed'] as int) == 1,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      
       categoryId: map['categoryId'] ?? 'default',
+
+      photoPath: map['photoPath'] as String?,
+      completedAt: map['completedAt'] != null 
+          ? DateTime.parse(map['completedAt'] as String)
+          : null,
+      completedBy: map['completedBy'] as String?,
+      latitude: map['latitude'] as double?,
+      longitude: map['longitude'] as double?,
+      locationName: map['locationName'] as String?,
     );
   }
 
+
   factory Task.fromMapWithCategory(Map<String, dynamic> map) {
     Category? category;
-
+    
     if (map['categoryId'] != null && map['categoryName'] != null) {
       category = Category(
         id: map['categoryId'] as String,
@@ -59,34 +95,63 @@ class Task {
     }
 
     return Task(
-      id: map['id'] as String,
+      id: map['id'] as int?, 
       title: map['title'] as String,
-      description: map['description'] ?? '',
+      description: map['description'] ?? '', 
+      priority: map['priority'] ?? 'medium', 
       completed: map['completed'] == 1,
-      priority: map['priority'] ?? 'medium',
       createdAt: DateTime.parse(map['createdAt'] as String),
+      
       categoryId: map['categoryId'] as String,
       category: category,
+
+      photoPath: map['photoPath'] as String?,
+      completedAt: map['completedAt'] != null 
+          ? DateTime.parse(map['completedAt'] as String)
+          : null,
+      completedBy: map['completedBy'] as String?,
+      latitude: map['latitude'] as double?,
+      longitude: map['longitude'] as double?,
+      locationName: map['locationName'] as String?,
     );
   }
 
+
   Task copyWith({
+    int? id,
     String? title,
     String? description,
-    bool? completed,
     String? priority,
+    bool? completed,
+    DateTime? createdAt,
+    
     String? categoryId,
     Category? category,
+
+    String? photoPath,
+    DateTime? completedAt,
+    String? completedBy,
+    double? latitude,
+    double? longitude,
+    String? locationName,
   }) {
     return Task(
-      id: id,
+      id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
-      completed: completed ?? this.completed,
       priority: priority ?? this.priority,
-      createdAt: createdAt,
+      completed: completed ?? this.completed,
+      createdAt: createdAt ?? this.createdAt,
+      
       categoryId: categoryId ?? this.categoryId,
       category: category ?? this.category,
+
+      photoPath: photoPath ?? this.photoPath,
+      completedAt: completedAt ?? this.completedAt,
+      completedBy: completedBy ?? this.completedBy,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      locationName: locationName ?? this.locationName,
     );
   }
 }
