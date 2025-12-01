@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -23,7 +24,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -52,24 +53,29 @@ class DatabaseService {
         priority $textType,
         completed $intType,
         createdAt $textType,
-
-        -- MANTIDO: Campo de Categoria
         categoryId $textType, 
-
-        -- NOVO: Campos da Câmera
         photoPath TEXT,
-
-        -- NOVO: Campos dos Sensores
         completedAt TEXT,
         completedBy TEXT,
-
-        -- NOVO: Campos do GPS
         latitude REAL,
         longitude REAL,
         locationName TEXT,
+        isSynced INTEGER DEFAULT 0,
+        updatedAt TEXT NOT NULL,
+        serverId TEXT, -- Adicionado caso precise futuramente
 
         -- MANTIDO: Chave Estrangeira
         FOREIGN KEY (categoryId) REFERENCES categories (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL, -- 'CREATE', 'UPDATE', 'DELETE'
+        taskId INTEGER,
+        payload TEXT, -- JSON da tarefa
+        createdAt TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
   }
@@ -103,7 +109,45 @@ class DatabaseService {
       await db.execute('ALTER TABLE tasks ADD COLUMN longitude REAL');
       await db.execute('ALTER TABLE tasks ADD COLUMN locationName TEXT');
     }
+    if (oldVersion < 5) {
+      await db.execute(
+        'ALTER TABLE tasks ADD COLUMN isSynced INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE tasks ADD COLUMN updatedAt TEXT DEFAULT ""',
+      );
+      await db.execute('ALTER TABLE tasks ADD COLUMN serverId TEXT');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_queue (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          action TEXT NOT NULL,
+          taskId INTEGER,
+          payload TEXT,
+          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    }
     print('✅ Banco migrado de v$oldVersion para v$newVersion');
+  }
+
+  Future<void> addToSyncQueue(String action, int taskId, String payload) async {
+    final db = await instance.database;
+    await db.insert('sync_queue', {
+      'action': action,
+      'taskId': taskId,
+      'payload': payload,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getSyncQueue() async {
+    final db = await instance.database;
+    return await db.query('sync_queue', orderBy: 'id ASC');
+  }
+
+  Future<void> removeFromQueue(int id) async {
+    final db = await instance.database;
+    await db.delete('sync_queue', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<Category>> readAllCategories() async {
@@ -116,6 +160,9 @@ class DatabaseService {
   Future<Task> create(Task task) async {
     final db = await instance.database;
     final id = await db.insert('tasks', task.toMap());
+
+    await addToSyncQueue('CREATE', id, jsonEncode(task.toMap()));
+
     return task.copyWith(id: id);
   }
 
@@ -149,6 +196,9 @@ class DatabaseService {
 
   Future<int> update(Task task) async {
     final db = await instance.database;
+
+    await addToSyncQueue('UPDATE', task.id!, jsonEncode(task.toMap()));
+
     return db.update(
       'tasks',
       task.toMap(),
@@ -159,6 +209,9 @@ class DatabaseService {
 
   Future<int> delete(int id) async {
     final db = await instance.database;
+
+    await addToSyncQueue('DELETE', id, jsonEncode({'id': id}));
+
     return await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -174,6 +227,7 @@ class DatabaseService {
 
       final latDiff = (task.latitude! - latitude).abs();
       final lonDiff = (task.longitude! - longitude).abs();
+      // Cálculo simples de distância (aproximação)
       final distanceInMeters = ((latDiff * 111000) + (lonDiff * 111000)) / 2;
 
       return distanceInMeters <= radiusInMeters;
