@@ -32,6 +32,23 @@ class _TaskListScreenState extends State<TaskListScreen> {
   void initState() {
     super.initState();
     SyncService.instance.initialize();
+
+    SyncService.instance.isOnline.addListener(() {
+      if (SyncService.instance.isOnline.value) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            _loadData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('🔄 Sincronização concluída!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        });
+      }
+    });
+
     _loadData();
     _setupShakeDetection();
   }

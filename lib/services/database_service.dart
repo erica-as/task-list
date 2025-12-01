@@ -234,6 +234,11 @@ class DatabaseService {
     }).toList();
   }
 
+  Future<void> markAsSynced(int id) async {
+    final db = await instance.database;
+    await db.update('tasks', {'isSynced': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future close() async {
     final db = await instance.database;
     db.close();

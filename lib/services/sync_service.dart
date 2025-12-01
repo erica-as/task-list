@@ -57,10 +57,11 @@ class SyncService {
 
         if (success) {
           await DatabaseService.instance.removeFromQueue(queueId);
+
           if (item['taskId'] != null && action != 'DELETE') {
-            // Atualizar flag isSynced = 1 no banco
-            // await DatabaseService.instance.markAsSynced(item['taskId']);
+            await DatabaseService.instance.markAsSynced(item['taskId']);
           }
+
           print('✅ Item da fila $queueId processado ($action)');
         }
       } catch (e) {
