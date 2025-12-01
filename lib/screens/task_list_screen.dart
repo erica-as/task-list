@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:task_manager/services/sync_service.dart';
 import '../models/category.dart';
 import '../models/task.dart';
 import '../services/database_service.dart';
@@ -30,6 +31,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   void initState() {
     super.initState();
+    SyncService.instance.initialize();
     _loadData();
     _setupShakeDetection();
   }
@@ -375,6 +377,24 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
             const Text('Minhas Tarefas'),
           ],
         ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(24),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: SyncService.instance.isOnline,
+            builder: (context, isOnline, child) {
+              return Container(
+                color: isOnline ? Colors.green : Colors.red,
+                width: double.infinity,
+                height: 24,
+                alignment: Alignment.center,
+                child: Text(
+                  isOnline ? 'ONLINE' : 'OFFLINE - Dados salvos localmente',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              );
+            },
+          ),
+        ),
         backgroundColor: appBarColor,
         foregroundColor: Colors.white,
         actions: [
@@ -580,6 +600,7 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
                               final task = filteredTasks[index];
                               return TaskCard(
                                 task: task,
+                                isSynced: task.isSynced == 1,
                                 onTap: () => _openTaskForm(task),
                                 onToggle: () => _toggleTask(task),
                                 onDelete: () => _deleteTask(task),

@@ -5,6 +5,7 @@ import '../models/task.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
+  final bool isSynced;
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
@@ -15,6 +16,7 @@ class TaskCard extends StatelessWidget {
   const TaskCard({
     super.key,
     required this.task,
+    required this.isSynced,
     required this.onTap,
     required this.onToggle,
     required this.onDelete,
@@ -70,6 +72,7 @@ class TaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final priorityColor = _getPriorityColor();
     final appBarColor = Theme.of(context).colorScheme.primary;
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -140,6 +143,7 @@ class TaskCard extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
+                            // 1. Badge de Prioridade
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -173,6 +177,7 @@ class TaskCard extends StatelessWidget {
                               ),
                             ),
 
+                            // 2. Badge de Categoria
                             if (task.category != null)
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -208,6 +213,12 @@ class TaskCard extends StatelessWidget {
                                   ],
                                 ),
                               ),
+
+                            _buildBadge(
+                              isSynced ? 'Sincronizado' : 'Pendente',
+                              isSynced ? Icons.cloud_done : Icons.cloud_off,
+                              isSynced ? Colors.green : Colors.orange,
+                            ),
 
                             if (task.hasPhoto)
                               _buildBadge(
