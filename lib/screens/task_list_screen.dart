@@ -367,7 +367,14 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Minhas Tarefas'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_outline, size: 24),
+            const SizedBox(width: 12),
+            const Text('Minhas Tarefas'),
+          ],
+        ),
         backgroundColor: appBarColor,
         foregroundColor: Colors.white,
         actions: [
