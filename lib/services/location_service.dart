@@ -61,7 +61,6 @@ class LocationService {
     }
   }
 
-  // GEOCODING
   Future<String?> getAddressFromCoordinates(double lat, double lon) async {
     try {
       final placemarks = await placemarkFromCoordinates(lat, lon);

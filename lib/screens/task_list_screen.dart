@@ -18,16 +18,13 @@ class TaskListScreen extends StatefulWidget {
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  // Estado das listas
   List<Task> _tasks = [];
   List<Category> _categories = [];
 
-  // Estado dos filtros
-  String _filter = 'all'; // 'all', 'completed', 'pending'
+  String _filter = 'all';
   String _categoryFilter = 'all';
   Position? _nearbyPosition;
 
-  // Estado da tela
   bool _isLoading = false;
 
   @override
@@ -144,7 +141,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
-  // Carrega tarefas e categorias
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
@@ -173,7 +169,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
-  // Lógica de filtro 'nearby' (da atividade)
   Future<void> _filterByNearby() async {
     final position = await LocationService.instance.getCurrentLocation();
 
@@ -207,12 +202,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
   List<Task> get _filteredTasks {
     var tasks = _tasks;
 
-    // 1. Filtro por Categoria
     if (_categoryFilter != 'all') {
       tasks = tasks.where((t) => t.categoryId == _categoryFilter).toList();
     }
 
-    // 2. Filtro por Status
     switch (_filter) {
       case 'completed':
         tasks = tasks.where((t) => t.completed).toList();
@@ -240,7 +233,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
     return tasks;
   }
 
-  // ATUALIZADO: _toggleTask agora usa a lógica de 'manual'
   Future<void> _toggleTask(Task task) async {
     try {
       final updated = task.copyWith(
@@ -333,7 +325,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
-  // Método para formatar e compartilhar a tarefa
   Future<void> _shareTask(Task task) async {
     final String status = task.completed ? "✓ Concluída" : "□ Pendente";
     final String priority = _getPriorityLabelForShare(task.priority);
@@ -369,24 +360,17 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
 
   @override
   Widget build(BuildContext context) {
-    // ATENÇÃO: A atividade usa _filteredTasks para estatísticas!
     final filteredTasks = _filteredTasks;
-    // O card de stats deve ser sobre TODAS as tarefas, não só as filtradas.
-    // Vou usar _tasks para o 'stats', mas _filteredTasks para a lista.
-    final stats = _calculateStats(
-      _tasks,
-    ); // FIX: Usando _tasks, não _filteredTasks
+    final stats = _calculateStats(_tasks);
 
-    // Cor da AppBar da Atividade (Azul)
     final appBarColor = Colors.deepPurple;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Minhas Tarefas'),
-        backgroundColor: appBarColor, // ATUALIZADO: Cor da atividade
+        backgroundColor: appBarColor,
         foregroundColor: Colors.white,
         actions: [
-          // MANTIDO: Seu filtro de Categoria
           PopupMenuButton<String>(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Filtrar por Categoria',
@@ -431,19 +415,16 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
             ],
           ),
 
-          // ATUALIZADO: Filtro de Status com 'nearby'
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
             tooltip: 'Filtrar por Status',
             onSelected: (value) {
-              // Lógica de filtro da atividade
               if (value == 'nearby') {
                 _filterByNearby();
               } else {
                 setState(() {
                   _filter = value;
-                  _nearbyPosition = null; // Limpa o filtro nearby
-                  // Não recarrega os dados, o getter faz o trabalho
+                  _nearbyPosition = null;
                 });
               }
             },
@@ -452,7 +433,7 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
                 value: 'all',
                 child: Row(
                   children: [
-                    Icon(Icons.list_alt), // Ícone da atividade
+                    Icon(Icons.list_alt),
                     SizedBox(width: 8),
                     Text('Todas'),
                   ],
@@ -462,7 +443,7 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
                 value: 'pending',
                 child: Row(
                   children: [
-                    Icon(Icons.pending_outlined), // Ícone da atividade
+                    Icon(Icons.pending_outlined),
                     SizedBox(width: 8),
                     Text('Pendentes'),
                   ],
@@ -472,7 +453,7 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
                 value: 'completed',
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle_outline), // Ícone da atividade
+                    Icon(Icons.check_circle_outline),
                     SizedBox(width: 8),
                     Text('Concluídas'),
                   ],
@@ -491,7 +472,6 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
             ],
           ),
 
-          // NOVO: Botão de Info da atividade
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () {
@@ -526,14 +506,12 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
           ),
         ],
       ),
-      // ATUALIZADO: Corpo (Body) da atividade
       body: RefreshIndicator(
-        onRefresh: _loadData, // MANTIDO: _loadData
+        onRefresh: _loadData,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  // ATUALIZADO: CARD DE ESTATÍSTICAS
                   Container(
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(20),
@@ -556,7 +534,6 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        // ATUALIZADO: Usando _StatItem
                         _StatItem(
                           label: 'Total',
                           value: stats['total'].toString(),
@@ -586,19 +563,14 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
                     ),
                   ),
 
-                  // LISTA DE TAREFAS
                   Expanded(
                     child: filteredTasks.isEmpty
-                        ? _buildEmptyState() // ATUALIZADO: Novo Empty State
+                        ? _buildEmptyState()
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: filteredTasks.length,
                             itemBuilder: (context, index) {
                               final task = filteredTasks[index];
-                              // MANTIDO: Seu TaskCard com onToggle e onShare
-                              // A atividade mudou o onToggle para onCheckboxChanged
-                              // Se o seu TaskCard quebrar, você terá que
-                              // mudar o nome do parâmetro aqui.
                               return TaskCard(
                                 task: task,
                                 onTap: () => _openTaskForm(task),
@@ -613,8 +585,8 @@ ${task.description.isNotEmpty ? 'Descrição: ${task.description}' : ''}
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openTaskForm(), // MANTIDO: Sua chamada
-        backgroundColor: appBarColor, // ATUALIZADO: Cor da atividade
+        onPressed: () => _openTaskForm(),
+        backgroundColor: appBarColor,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Nova Tarefa'),

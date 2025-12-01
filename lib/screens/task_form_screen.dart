@@ -22,20 +22,16 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  // Estado dos campos
   String _priority = 'medium';
   bool _completed = false;
   String? _selectedCategoryId;
 
-  // Estado da tela
   bool _isLoading = false;
   bool _isLoadingCategories = true;
   List<Category> _categories = [];
 
-  // Estado da Câmera
   String? _photoPath;
 
-  // Estado do GPS
   double? _latitude;
   double? _longitude;
   String? _locationName;
@@ -52,7 +48,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       _completed = widget.task!.completed;
       _selectedCategoryId = widget.task!.categoryId;
 
-      // NOVO: Câmera e GPS
       _photoPath = widget.task!.photoPath;
       _latitude = widget.task!.latitude;
       _longitude = widget.task!.longitude;
@@ -88,7 +83,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     }
   }
 
-  // --- NOVO: MÉTODOS CÂMERA ---
   Future<void> _takePicture() async {
     final photoPath = await CameraService.instance.takePicture(context);
 
@@ -133,7 +127,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     );
   }
 
-  // --- NOVO: MÉTODOS GPS ---
   void _showLocationPicker() {
     showModalBottomSheet(
       context: context,
@@ -198,7 +191,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
     try {
       if (widget.task == null) {
-        // Criar nova tarefa
         final newTask = Task(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
@@ -222,7 +214,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           );
         }
       } else {
-        // Atualizar tarefa existente
         final updatedTask = widget.task!.copyWith(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
@@ -286,7 +277,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Campo de Título
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(
@@ -310,7 +300,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Campo de Descrição
                     TextFormField(
                       controller: _descriptionController,
                       decoration: const InputDecoration(
@@ -359,7 +348,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Dropdown de Prioridade
                     DropdownButtonFormField<String>(
                       value: _priority,
                       decoration: const InputDecoration(
@@ -418,7 +406,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Switch de Completo
                     Card(
                       child: SwitchListTile(
                         title: const Text('Tarefa Completa'),
@@ -442,7 +429,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
                     const SizedBox(height: 24),
 
-                    // NOVO: SEÇÃO FOTO
                     Row(
                       children: [
                         Icon(Icons.photo_camera, color: Colors.deepPurple),
@@ -504,7 +490,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
                     const Divider(height: 32),
 
-                    // NOVO: SEÇÃO LOCALIZAÇÃO
                     Row(
                       children: [
                         Icon(Icons.location_on, color: Colors.deepPurple),

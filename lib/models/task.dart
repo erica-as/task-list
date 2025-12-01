@@ -10,11 +10,11 @@ class Task {
   final DateTime createdAt;
 
   final String categoryId;
-  final Category? category; 
+  final Category? category;
 
   final String? photoPath;
   final DateTime? completedAt;
-  final String? completedBy; // 'manual', 'shake'
+  final String? completedBy;
   final double? latitude;
   final double? longitude;
   final String? locationName;
@@ -22,8 +22,8 @@ class Task {
   Task({
     this.id,
     required this.title,
-    required this.description, 
-    required this.priority, 
+    required this.description,
+    required this.priority,
     this.completed = false,
     DateTime? createdAt,
     required this.categoryId,
@@ -48,7 +48,7 @@ class Task {
       'priority': priority,
       'completed': completed ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
-      
+
       'categoryId': categoryId,
 
       'photoPath': photoPath,
@@ -68,11 +68,11 @@ class Task {
       priority: map['priority'] as String,
       completed: (map['completed'] as int) == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
-      
+
       categoryId: map['categoryId'] ?? 'default',
 
       photoPath: map['photoPath'] as String?,
-      completedAt: map['completedAt'] != null 
+      completedAt: map['completedAt'] != null
           ? DateTime.parse(map['completedAt'] as String)
           : null,
       completedBy: map['completedBy'] as String?,
@@ -82,10 +82,9 @@ class Task {
     );
   }
 
-
   factory Task.fromMapWithCategory(Map<String, dynamic> map) {
     Category? category;
-    
+
     if (map['categoryId'] != null && map['categoryName'] != null) {
       category = Category(
         id: map['categoryId'] as String,
@@ -95,18 +94,18 @@ class Task {
     }
 
     return Task(
-      id: map['id'] as int?, 
+      id: map['id'] as int?,
       title: map['title'] as String,
-      description: map['description'] ?? '', 
-      priority: map['priority'] ?? 'medium', 
+      description: map['description'] ?? '',
+      priority: map['priority'] ?? 'medium',
       completed: map['completed'] == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
-      
+
       categoryId: map['categoryId'] as String,
       category: category,
 
       photoPath: map['photoPath'] as String?,
-      completedAt: map['completedAt'] != null 
+      completedAt: map['completedAt'] != null
           ? DateTime.parse(map['completedAt'] as String)
           : null,
       completedBy: map['completedBy'] as String?,
@@ -116,7 +115,6 @@ class Task {
     );
   }
 
-
   Task copyWith({
     int? id,
     String? title,
@@ -124,7 +122,7 @@ class Task {
     String? priority,
     bool? completed,
     DateTime? createdAt,
-    
+
     String? categoryId,
     Category? category,
 
@@ -142,7 +140,7 @@ class Task {
       priority: priority ?? this.priority,
       completed: completed ?? this.completed,
       createdAt: createdAt ?? this.createdAt,
-      
+
       categoryId: categoryId ?? this.categoryId,
       category: category ?? this.category,
 

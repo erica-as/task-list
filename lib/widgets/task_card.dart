@@ -1,29 +1,26 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // MANTIDO: Para a data
+import 'package:intl/intl.dart';
 import '../models/task.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
   final VoidCallback onTap;
-  final VoidCallback
-  onToggle; // MANTIDO: Do seu v1 (em vez de onCheckboxChanged)
+  final VoidCallback onToggle;
   final VoidCallback onDelete;
-  final VoidCallback onShare; // MANTIDO: Do seu v1
+  final VoidCallback onShare;
 
-  // MANTIDO: Formatador de data do seu v1
   static final _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
   const TaskCard({
     super.key,
     required this.task,
     required this.onTap,
-    required this.onToggle, // MANTIDO
+    required this.onToggle,
     required this.onDelete,
-    required this.onShare, // MANTIDO
+    required this.onShare,
   });
 
-  // ATUALIZADO: Funções de Prioridade da atividade (v2)
   Color _getPriorityColor() {
     switch (task.priority) {
       case 'urgent':
@@ -31,7 +28,7 @@ class TaskCard extends StatelessWidget {
       case 'high':
         return Colors.orange;
       case 'medium':
-        return Colors.amber; // A atividade usa 'amber', não 'orange'
+        return Colors.amber;
       case 'low':
         return Colors.green;
       default:
@@ -72,9 +69,7 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final priorityColor = _getPriorityColor();
-    final appBarColor = Theme.of(context).colorScheme.primary; // Cor principal
-
-    // ATUALIZADO: Layout do Card da atividade (v2)
+    final appBarColor = Theme.of(context).colorScheme.primary;
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -100,7 +95,6 @@ class TaskCard extends StatelessWidget {
                 children: [
                   Checkbox(
                     value: task.completed,
-                    // ATUALIZADO: Chamando seu onToggle()
                     onChanged: (value) => onToggle(),
                     activeColor: Colors.green,
                   ),
@@ -142,12 +136,10 @@ class TaskCard extends StatelessWidget {
 
                         const SizedBox(height: 8),
 
-                        // --- BADGES (MESCLADO) ---
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            // Prioridade (da Atividade v2)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -181,7 +173,6 @@ class TaskCard extends StatelessWidget {
                               ),
                             ),
 
-                            // MANTIDO: Categoria (do seu v1, estilo v2)
                             if (task.category != null)
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -201,7 +192,7 @@ class TaskCard extends StatelessWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      Icons.circle, // Ou Icons.category
+                                      Icons.circle,
                                       size: 14,
                                       color: task.category!.color,
                                     ),
@@ -218,7 +209,6 @@ class TaskCard extends StatelessWidget {
                                 ),
                               ),
 
-                            // Foto (da Atividade v2)
                             if (task.hasPhoto)
                               _buildBadge(
                                 'Foto',
@@ -226,7 +216,6 @@ class TaskCard extends StatelessWidget {
                                 Colors.deepPurple,
                               ),
 
-                            // Localização (da Atividade v2)
                             if (task.hasLocation)
                               _buildBadge(
                                 'Local',
@@ -234,7 +223,6 @@ class TaskCard extends StatelessWidget {
                                 Colors.purple,
                               ),
 
-                            // Shake (da Atividade v2)
                             if (task.completed && task.wasCompletedByShake)
                               _buildBadge(
                                 'Shake',
@@ -242,7 +230,6 @@ class TaskCard extends StatelessWidget {
                                 Colors.green,
                               ),
 
-                            // MANTIDO: Data (do seu v1, estilo v2)
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -267,7 +254,6 @@ class TaskCard extends StatelessWidget {
                     ),
                   ),
 
-                  // MANTIDO: Botões Share e Delete (do seu v1)
                   Column(
                     children: [
                       IconButton(
@@ -287,7 +273,6 @@ class TaskCard extends StatelessWidget {
               ),
             ),
 
-            // ATUALIZADO: PREVIEW DA FOTO (da Atividade v2)
             if (task.hasPhoto)
               ClipRRect(
                 borderRadius: const BorderRadius.only(
@@ -300,7 +285,6 @@ class TaskCard extends StatelessWidget {
                   height: 180,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    // Bom 'error builder' da atividade
                     return Container(
                       height: 180,
                       color: Colors.grey[200],
@@ -332,7 +316,6 @@ class TaskCard extends StatelessWidget {
     );
   }
 
-  // NOVO: Widget auxiliar para os badges (para evitar repetição)
   Widget _buildBadge(String label, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
