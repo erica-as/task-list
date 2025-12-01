@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -82,8 +83,18 @@ class LocationService {
   }
 
   Future<Position?> getLocationFromAddress(String address) async {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      print(
+        '⚠️ Geocoding não é suportado no Desktop nativamente pelo pacote geocoding.',
+      );
+      return null;
+    }
+
     try {
-      final locations = await locationFromAddress(address);
+      final locations = await locationFromAddress(
+        address,
+        localeIdentifier: 'pt_BR',
+      );
       if (locations.isNotEmpty) {
         final location = locations.first;
         return Position(
