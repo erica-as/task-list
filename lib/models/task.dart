@@ -19,6 +19,9 @@ class Task {
   final double? longitude;
   final String? locationName;
 
+  final int? isSynced;
+  final String? updatedAt;
+
   Task({
     this.id,
     required this.title,
@@ -34,7 +37,10 @@ class Task {
     this.latitude,
     this.longitude,
     this.locationName,
-  }) : createdAt = createdAt ?? DateTime.now();
+    this.isSynced = 0,
+    String? updatedAt,
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now().toIso8601String();
 
   bool get hasPhoto => photoPath != null && photoPath!.isNotEmpty;
   bool get hasLocation => latitude != null && longitude != null;
@@ -48,15 +54,15 @@ class Task {
       'priority': priority,
       'completed': completed ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
-
       'categoryId': categoryId,
-
       'photoPath': photoPath,
       'completedAt': completedAt?.toIso8601String(),
       'completedBy': completedBy,
       'latitude': latitude,
       'longitude': longitude,
       'locationName': locationName,
+      'isSynced': isSynced,
+      'updatedAt': updatedAt,
     };
   }
 
@@ -68,9 +74,7 @@ class Task {
       priority: map['priority'] as String,
       completed: (map['completed'] as int) == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
-
       categoryId: map['categoryId'] ?? 'default',
-
       photoPath: map['photoPath'] as String?,
       completedAt: map['completedAt'] != null
           ? DateTime.parse(map['completedAt'] as String)
@@ -79,6 +83,8 @@ class Task {
       latitude: map['latitude'] as double?,
       longitude: map['longitude'] as double?,
       locationName: map['locationName'] as String?,
+      isSynced: map['isSynced'] as int? ?? 1,
+      updatedAt: map['updatedAt'] as String?,
     );
   }
 
@@ -100,10 +106,8 @@ class Task {
       priority: map['priority'] ?? 'medium',
       completed: map['completed'] == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
-
       categoryId: map['categoryId'] as String,
       category: category,
-
       photoPath: map['photoPath'] as String?,
       completedAt: map['completedAt'] != null
           ? DateTime.parse(map['completedAt'] as String)
@@ -112,6 +116,9 @@ class Task {
       latitude: map['latitude'] as double?,
       longitude: map['longitude'] as double?,
       locationName: map['locationName'] as String?,
+
+      isSynced: map['isSynced'] as int? ?? 1,
+      updatedAt: map['updatedAt'] as String?,
     );
   }
 
@@ -122,16 +129,16 @@ class Task {
     String? priority,
     bool? completed,
     DateTime? createdAt,
-
     String? categoryId,
     Category? category,
-
     String? photoPath,
     DateTime? completedAt,
     String? completedBy,
     double? latitude,
     double? longitude,
     String? locationName,
+    int? isSynced,
+    String? updatedAt,
   }) {
     return Task(
       id: id ?? this.id,
@@ -140,16 +147,16 @@ class Task {
       priority: priority ?? this.priority,
       completed: completed ?? this.completed,
       createdAt: createdAt ?? this.createdAt,
-
       categoryId: categoryId ?? this.categoryId,
       category: category ?? this.category,
-
       photoPath: photoPath ?? this.photoPath,
       completedAt: completedAt ?? this.completedAt,
       completedBy: completedBy ?? this.completedBy,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       locationName: locationName ?? this.locationName,
+      isSynced: isSynced ?? this.isSynced,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
